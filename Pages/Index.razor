@@ -1,0 +1,94 @@
+﻿@page "/{*fragment}"
+@inject NavigationManager navigationManager
+@using System.Threading
+
+<div class="banner">
+    <span class="title">Linkable Diff<span class="version"> - @ThisAssembly.AssemblyInformationalVersion</span></span>
+    <span class="about">
+        by <a target="_blank" href="https://twitter.com/davidwengier">@@davidwengier</a>
+        - <a target="_blank" href="https://github.com/davidwengier/LinkableDiff">GitHub</a>
+    </span>
+</div>
+
+<div class="parent">
+    <div class="diff-header">
+        <span class="header">Type Here ⬇ Copy Url Here ⬆</span>
+    </div>
+    <div class="v1Diff"><MonacoDiffEditor @ref="diff" Id="diff" ConstructionOptions="DiffEditorConstructionOptions" OnKeyUpOriginal="OnKeyUp" OnKeyUpModified="OnKeyUp" /></div>
+</div>
+
+@code {
+    private MonacoDiffEditor diff;
+    private string _initialVersion1Code = "record R(int X)\n{\n    public int X { get; init; }\n}";
+    private string _initialVersion2Code = "record R(int X)\n{\n    public int X { get; set; } = X;\n}";
+
+    [ParameterAttribute]
+    public string fragment { get; set; }
+
+    private DiffEditorConstructionOptions DiffEditorConstructionOptions(MonacoDiffEditor editor)
+    {
+        var options = new DiffEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Minimap = new EditorMinimapOptions() { Enabled = false },
+            Folding = false,
+            RenderSideBySide = true,
+            IgnoreTrimWhitespace = true,
+            OriginalEditable = true,
+            ReadOnly = false
+        };
+
+        return options;
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var uri = navigationManager.ToAbsoluteUri(navigationManager.Uri);
+        var slug = uri.Fragment.TrimStart('#');
+        if (!string.IsNullOrWhiteSpace(slug))
+        {
+            var uncompressed = Runner.Uncompress(slug);
+            _initialVersion1Code = "Error reading URL:\n\n" + uncompressed;
+            var bits = uncompressed.Split((char)7);
+            if (bits.Length == 2)
+            {
+                _initialVersion1Code = bits[0];
+                _initialVersion2Code = bits[1];
+            }
+        }
+
+        var version1Model = await MonacoEditorBase.CreateModel(_initialVersion1Code, "txt");
+        var version2Model = await MonacoEditorBase.CreateModel(_initialVersion2Code, "txt");
+
+        await diff.SetModel(new DiffEditorModel
+        {
+            Original = version1Model,
+            Modified = version2Model
+        });
+    }
+  
+    private void OnKeyUp(KeyboardEvent keyboardEvent)
+    {
+        // ignore arrow keys
+        if (keyboardEvent.KeyCode == KeyCode.LeftArrow ||
+            keyboardEvent.KeyCode == KeyCode.RightArrow ||
+            keyboardEvent.KeyCode == KeyCode.UpArrow ||
+            keyboardEvent.KeyCode == KeyCode.DownArrow ||
+            keyboardEvent.KeyCode == KeyCode.PageUp ||
+            keyboardEvent.KeyCode == KeyCode.PageDown)
+        {
+            return;
+        }
+
+        _ = Update();
+    }
+
+    private async Task Update()
+    {
+        var slug = Runner.Compress(await diff.OriginalEditor.GetValue(), await diff.ModifiedEditor.GetValue());
+
+        navigationManager.NavigateTo(navigationManager.BaseUri + "#" + slug, forceLoad: false);
+    }
+}
