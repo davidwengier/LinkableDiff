@@ -3,11 +3,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 
-#nullable enable
-
 namespace LinkableDiff
 {
-    internal static class Runner
+    internal static class Compressor
     {
         public static string Compress(string version1, string version2)
         {
@@ -22,7 +20,7 @@ namespace LinkableDiff
                     var inputBytes = Encoding.Unicode.GetBytes(input);
                     compressor.Write(inputBytes);
                 }
-                return Convert.ToBase64String(ms.ToArray());
+                return Convert.ToBase64String(ms.ToArray()).Replace("/", "$");
             }
         }
 
@@ -30,7 +28,7 @@ namespace LinkableDiff
         {
             try
             {
-                var bytes = Convert.FromBase64String(slug);
+                var bytes = Convert.FromBase64String(slug.Replace("$", "/"));
 
                 using var ms = new MemoryStream(bytes);
                 using (var compressor = new DeflateStream(ms, CompressionMode.Decompress))

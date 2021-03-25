@@ -14,7 +14,7 @@
     <div class="diff-header">
         <span class="header">Type Here ⬇ Copy Url Here ⬆</span>
     </div>
-    <div class="v1Diff"><MonacoDiffEditor @ref="diff" Id="diff" ConstructionOptions="DiffEditorConstructionOptions" OnKeyUpOriginal="OnKeyUp" OnKeyUpModified="OnKeyUp" /></div>
+    <div class="diff"><MonacoDiffEditor @ref="diff" Id="diff" ConstructionOptions="DiffEditorConstructionOptions" OnKeyUpOriginal="OnKeyUp" OnKeyUpModified="OnKeyUp" /></div>
 </div>
 
 @code {
@@ -49,7 +49,7 @@
         var slug = uri.Fragment.TrimStart('#');
         if (!string.IsNullOrWhiteSpace(slug))
         {
-            var uncompressed = Runner.Uncompress(slug);
+            var uncompressed = Compressor.Uncompress(slug);
             _initialVersion1Code = "Error reading URL:\n\n" + uncompressed;
             var bits = uncompressed.Split((char)7);
             if (bits.Length == 2)
@@ -68,8 +68,8 @@
             Modified = version2Model
         });
     }
-  
-    private void OnKeyUp(KeyboardEvent keyboardEvent)
+
+    private async Task OnKeyUp(KeyboardEvent keyboardEvent)
     {
         // ignore arrow keys
         if (keyboardEvent.KeyCode == KeyCode.LeftArrow ||
@@ -82,12 +82,9 @@
             return;
         }
 
-        _ = Update();
-    }
-
-    private async Task Update()
-    {
-        var slug = Runner.Compress(await diff.OriginalEditor.GetValue(), await diff.ModifiedEditor.GetValue());
+        var original = await diff.OriginalEditor.GetValue();
+        var modified = await diff.ModifiedEditor.GetValue();
+        var slug = Compressor.Compress(original, modified);
 
         navigationManager.NavigateTo(navigationManager.BaseUri + "#" + slug, forceLoad: false);
     }
