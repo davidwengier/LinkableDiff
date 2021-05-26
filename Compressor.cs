@@ -34,6 +34,7 @@ namespace LinkableDiff
             => Convert.FromBase64String(input.Replace('_', '/').Replace('-', '+') +
                 (input.Length % 4) switch
                 {
+                    0 => "",
                     2 => "==",
                     3 => "=",
                     _ => throw new ArgumentException()
