@@ -1,5 +1,6 @@
 ﻿@page "/{*fragment}"
 @inject NavigationManager navigationManager
+@inject IJSRuntime jsRuntime
 @using System.Threading
 
 <div class="banner">
@@ -14,20 +15,20 @@
     <div class="diff-header">
         <span class="header">Type Here ⬇ Copy Url Here ⬆</span>
     </div>
-    <div class="diff"><MonacoDiffEditor @ref="diff" Id="diff" ConstructionOptions="DiffEditorConstructionOptions" OnKeyUpOriginal="OnKeyUp" OnKeyUpModified="OnKeyUp" /></div>
+    <div class="diff"><StandaloneDiffEditor @ref="diff" Id="diff" ConstructionOptions="DiffEditorConstructionOptions" OnKeyUpOriginal="OnKeyUp" OnKeyUpModified="OnKeyUp" /></div>
 </div>
 
 @code {
-    private MonacoDiffEditor diff;
+    private StandaloneDiffEditor diff;
     private string _initialVersion1Code = "record R(int X)\n{\n    public int X { get; init; }\n}";
     private string _initialVersion2Code = "record R(int X)\n{\n    public int X { get; set; } = X;\n}";
 
     [ParameterAttribute]
     public string fragment { get; set; }
 
-    private DiffEditorConstructionOptions DiffEditorConstructionOptions(MonacoDiffEditor editor)
+    private StandaloneDiffEditorConstructionOptions DiffEditorConstructionOptions(StandaloneDiffEditor editor)
     {
-        var options = new DiffEditorConstructionOptions
+        var options = new StandaloneDiffEditorConstructionOptions
         {
             AutomaticLayout = true,
             Minimap = new EditorMinimapOptions() { Enabled = false },
@@ -59,8 +60,8 @@
             }
         }
 
-        var version1Model = await MonacoEditorBase.CreateModel(_initialVersion1Code, "txt");
-        var version2Model = await MonacoEditorBase.CreateModel(_initialVersion2Code, "txt");
+        var version1Model = await Global.CreateModel(jsRuntime, _initialVersion1Code, "txt");
+        var version2Model = await Global.CreateModel(jsRuntime, _initialVersion2Code, "txt");
 
         await diff.SetModel(new DiffEditorModel
         {
